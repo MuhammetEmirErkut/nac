@@ -19,7 +19,7 @@ redis_password = os.getenv("REDIS_PASSWORD", "redis123!")
 redis_host = os.getenv("REDIS_HOST", "redis")
 redis_port = os.getenv("REDIS_PORT", "6379")
 
-SQLALCHEMY_DATABASE_URL = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}"
+SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
