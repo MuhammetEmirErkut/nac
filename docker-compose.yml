@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: nac_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-radius}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-radius123!}
+      POSTGRES_DB: ${POSTGRES_DB:-radius}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-script.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - nac_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-radius}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    container_name: nac_redis
+    restart: always
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-redis123!}"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - nac_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  policy_engine:
+    build: 
+      context: ./policy_engine
+    container_name: nac_policy_engine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-radius}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-radius123!}
+      POSTGRES_DB: ${POSTGRES_DB:-radius}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123!}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    networks:
+      - nac_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  freeradius:
+    image: freeradius/freeradius-server:latest-3.2
+    container_name: nac_freeradius
+    restart: always
+    environment:
+      RADIUS_CLIENT_IP: ${RADIUS_CLIENT_IP:-0.0.0.0/0}
+      RADIUS_CLIENT_SECRET: ${RADIUS_CLIENT_SECRET:-testing123}
+      POLICY_URL: http://policy_engine:8000
+    volumes:
+      - ./freeradius/raddb:/opt/etc/raddb
+    ports:
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+    networks:
+      - nac_network
+    depends_on:
+      policy_engine:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "radclient -x localhost:1812 status testing123 || exit 0"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  nac_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
