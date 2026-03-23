@@ -16,10 +16,8 @@ server default {
         
         # Call rest to get authorization details and VLAN tags
         rest
-        if (ok) {
-            update control {
-                Auth-Type := rest
-            }
+        update control {
+            Auth-Type := rest
         }
     }
 

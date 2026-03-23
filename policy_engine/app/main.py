@@ -124,6 +124,17 @@ def authenticate(req: AuthRequest, db: Session = Depends(get_db)):
 
 @app.post("/authorize")
 def authorize(req: AuthRequest, db: Session = Depends(get_db)):
+    control_dict = {"Auth-Type": "rest"}
+    
+    # MAB Bypass Logic during authorization phase
+    if not req.password and req.mac_address and req.username == req.mac_address:
+        user = db.query(RadCheck).filter(RadCheck.username == req.mac_address).first()
+        if user:
+            control_dict["Auth-Type"] = "Accept"
+        else:
+            control_dict["Auth-Type"] = "Reject"
+            return AuthResponse(reply={}, control=control_dict)
+
     user_group = db.query(RadUserGroup).filter(RadUserGroup.username == req.username).order_by(RadUserGroup.priority).first()
     
     reply_dict = {}
