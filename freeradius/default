@@ -1,0 +1,45 @@
+server default {
+    listen {
+        type = auth
+        ipaddr = *
+        port = 0
+    }
+    listen {
+        ipaddr = *
+        port = 0
+        type = acct
+    }
+
+    authorize {
+        filter_username
+        preprocess
+        
+        # Call rest to get authorization details and VLAN tags
+        rest
+        if (ok) {
+            update control {
+                Auth-Type := rest
+            }
+        }
+    }
+
+    authenticate {
+        Auth-Type rest {
+            rest
+        }
+    }
+
+    preacct {
+        preprocess
+        acct_unique
+    }
+
+    accounting {
+        detail
+        rest
+    }
+    
+    session {
+        rest
+    }
+}

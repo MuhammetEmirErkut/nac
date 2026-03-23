@@ -63,15 +63,14 @@ services:
       retries: 5
 
   freeradius:
-    image: freeradius/freeradius-server:latest-3.2
+    build:
+      context: ./freeradius
     container_name: nac_freeradius
     restart: always
     environment:
       RADIUS_CLIENT_IP: ${RADIUS_CLIENT_IP:-0.0.0.0/0}
       RADIUS_CLIENT_SECRET: ${RADIUS_CLIENT_SECRET:-testing123}
       POLICY_URL: http://policy_engine:8000
-    volumes:
-      - ./freeradius/raddb:/opt/etc/raddb
     ports:
       - "1812:1812/udp"
       - "1813:1813/udp"
