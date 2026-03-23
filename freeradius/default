@@ -38,8 +38,4 @@ server default {
         detail
         rest
     }
-    
-    session {
-        rest
-    }
 }
