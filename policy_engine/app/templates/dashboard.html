@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>NAC Policy Engine - Dashboard</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; background-color: #f5f7f9; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #333; border-bottom: 2px solid #ccc; padding-bottom: 10px; }
+        h2 { color: #555; margin-top: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #007bff; color: white; }
+        tr:hover { background-color: #f1f1f1; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .badge.active { background-color: #28a745; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ NAC Monitoring Dashboard</h1>
+        
+        <h2>Aktif Oturumlar (Redis Cache)</h2>
+        {% if sessions %}
+        <table>
+            <tr>
+                <th>Oturum ID (Session ID)</th>
+                <th>Kullanıcı Adı / MAC</th>
+                <th>Durum</th>
+            </tr>
+            {% for s in sessions %}
+            <tr>
+                <td>{{ s.session_id }}</td>
+                <td>{{ s.username }}</td>
+                <td><span class="badge active">CANLI</span></td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>Şu anda ağa bağlı aktif bir cihaz / oturum bulunmamaktadır.</p>
+        {% endif %}
+
+        <h2>Kayıtlı Kullanıcılar (PostgreSQL)</h2>
+        {% if users %}
+        <table>
+            <tr>
+                <th>Kullanıcı Adı / MAC</th>
+                <th>Kimlik Doğrulama Tipi</th>
+            </tr>
+            {% for u in users %}
+            <tr>
+                <td>{{ u.username }}</td>
+                <td>{{ u.attribute }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>Henüz tanımlanmış bir kullanıcı/cihaz bulunmamaktadır.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

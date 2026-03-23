@@ -2,6 +2,9 @@ import os
 import bcrypt
 from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 import redis
@@ -32,6 +35,10 @@ redis_client = redis.Redis(
 )
 
 app = FastAPI(title="NAC Policy Engine")
+
+# Jinja2 Templates Setup
+templates_dir = Path(__file__).parent / "templates"
+templates = Jinja2Templates(directory=str(templates_dir))
 
 # Dependency
 def get_db():
@@ -177,6 +184,22 @@ def get_active_sessions():
     keys = redis_client.keys("session:*")
     sessions = []
     for k in keys:
-        user = redis_client.get(k)
-        sessions.append({"session_id": k.replace("session:", ""), "username": user})
+        uname = redis_client.get(k)
+        sessions.append({"session_id": k.replace("session:", ""), "username": uname})
     return sessions
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard(request: Request, db: Session = Depends(get_db)):
+    users = db.query(RadCheck).all()
+    
+    # Get active sessions
+    keys = redis_client.keys("session:*")
+    sessions = []
+    for k in keys:
+        uname = redis_client.get(k)
+        sessions.append({"session_id": k.replace("session:", ""), "username": uname})
+        
+    return templates.TemplateResponse(
+        "dashboard.html", 
+        {"request": request, "users": users, "sessions": sessions}
+    )
