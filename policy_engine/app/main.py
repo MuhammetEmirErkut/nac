@@ -2,6 +2,9 @@ import os
 import bcrypt
 from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 import redis
@@ -19,7 +22,7 @@ redis_password = os.getenv("REDIS_PASSWORD", "redis123!")
 redis_host = os.getenv("REDIS_HOST", "redis")
 redis_port = os.getenv("REDIS_PORT", "6379")
 
-SQLALCHEMY_DATABASE_URL = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}"
+SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -32,6 +35,10 @@ redis_client = redis.Redis(
 )
 
 app = FastAPI(title="NAC Policy Engine")
+
+# Jinja2 Templates Setup
+templates_dir = Path(__file__).parent / "templates"
+templates = Jinja2Templates(directory=str(templates_dir))
 
 # Dependency
 def get_db():
@@ -117,6 +124,17 @@ def authenticate(req: AuthRequest, db: Session = Depends(get_db)):
 
 @app.post("/authorize")
 def authorize(req: AuthRequest, db: Session = Depends(get_db)):
+    control_dict = {"Auth-Type": "rest"}
+    
+    # MAB Bypass Logic during authorization phase
+    if not req.password and req.mac_address and req.username == req.mac_address:
+        user = db.query(RadCheck).filter(RadCheck.username == req.mac_address).first()
+        if user:
+            control_dict["Auth-Type"] = "Accept"
+        else:
+            control_dict["Auth-Type"] = "Reject"
+            return AuthResponse(reply={}, control=control_dict)
+
     user_group = db.query(RadUserGroup).filter(RadUserGroup.username == req.username).order_by(RadUserGroup.priority).first()
     
     reply_dict = {}
@@ -177,6 +195,22 @@ def get_active_sessions():
     keys = redis_client.keys("session:*")
     sessions = []
     for k in keys:
-        user = redis_client.get(k)
-        sessions.append({"session_id": k.replace("session:", ""), "username": user})
+        uname = redis_client.get(k)
+        sessions.append({"session_id": k.replace("session:", ""), "username": uname})
     return sessions
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard(request: Request, db: Session = Depends(get_db)):
+    users = db.query(RadCheck).all()
+    
+    # Get active sessions
+    keys = redis_client.keys("session:*")
+    sessions = []
+    for k in keys:
+        uname = redis_client.get(k)
+        sessions.append({"session_id": k.replace("session:", ""), "username": uname})
+        
+    return templates.TemplateResponse(
+        "dashboard.html", 
+        {"request": request, "users": users, "sessions": sessions}
+    )

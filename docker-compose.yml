@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:18-alpine
@@ -49,6 +47,8 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123!}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+    ports:
+      - "8000:8000"
     networks:
       - nac_network
     depends_on:
