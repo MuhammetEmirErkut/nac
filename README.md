@@ -1,5 +1,7 @@
 # Network Access Control (NAC) Sistemi
 
+<img width="361" height="531" alt="report drawio" src="https://github.com/user-attachments/assets/12dd3b1d-e9b8-44a3-b0b3-dadb4b599e55" />
+
 Bu proje FreeRADIUS, FastAPI (Policy Engine), PostgreSQL ve Redis kullanarak modern bir AAA (Authentication, Authorization, Accounting) mimarisi kurmayı amaçlamaktadır. 
 
 ## Gereksinimler
